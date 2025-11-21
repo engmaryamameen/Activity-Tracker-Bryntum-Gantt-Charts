@@ -1,0 +1,70 @@
+name: Update License Year
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'
+  workflow_dispatch:
+
+jobs:
+  update-license:
+    name: Update License Year
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Update license year
+        run: |
+          cat > update-license.js << 'SCRIPT'
+          const fs = require('fs');
+          const LICENSE_FILE = 'LICENSE';
+          const START_YEAR = 2025;
+          const CURRENT_YEAR = new Date().getFullYear();
+          
+          if (!fs.existsSync(LICENSE_FILE)) {
+            console.error('Error: LICENSE file not found');
+            process.exit(1);
+          }
+          
+          let licenseContent = fs.readFileSync(LICENSE_FILE, 'utf8');
+          
+          const copyrightRegex = /Copyright \(c\) (\d{4})(?:-(\d{4}))?(?:-present)?/;
+          const match = licenseContent.match(copyrightRegex);
+          
+          if (match) {
+            const fileStartYear = parseInt(match[1], 10);
+            const fileEndYear = match[2] ? parseInt(match[2], 10) : null;
+            const actualStartYear = fileStartYear < START_YEAR ? fileStartYear : START_YEAR;
+            
+            let newCopyright;
+            if (CURRENT_YEAR > actualStartYear) {
+              newCopyright = `Copyright (c) ${actualStartYear}-${CURRENT_YEAR}`;
+            } else if (CURRENT_YEAR === actualStartYear && !fileEndYear) {
+              newCopyright = `Copyright (c) ${actualStartYear}-present`;
+            } else {
+              newCopyright = `Copyright (c) ${actualStartYear}`;
+            }
+            
+            licenseContent = licenseContent.replace(copyrightRegex, newCopyright);
+            fs.writeFileSync(LICENSE_FILE, licenseContent, 'utf8');
+            console.log(`License year updated to ${CURRENT_YEAR > actualStartYear ? `${actualStartYear}-${CURRENT_YEAR}` : actualStartYear}`);
+          }
+          SCRIPT
+          node update-license.js
+          rm update-license.js
+      
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add LICENSE
+          git diff --staged --quiet || (git commit -m "chore: update license year to $(date +%Y)" && git push)
+
