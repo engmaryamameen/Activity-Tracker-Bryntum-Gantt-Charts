@@ -13,7 +13,7 @@
     "lint": "eslint . --ext .ts"
   },
   "keywords": ["express", "mongodb", "bryntum", "gantt", "typescript"],
-  "author": "engmaryamameen",
+  "author": "engmaryamameen <eng.maryamameen@gmail.com>",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
